@@ -1,0 +1,257 @@
+-----------------------------------------
+-------- Structural approach ------------
+--=======================================
+-------- Architecure 5 ------------------
+-----------------------------------------
+
+architecture a5 of square_root is
+	type statetype is (idle, init, Z_plus_V, N_comp_Z, N_minus_Z, Z_plus_V2, Z_minus_V, ZV_div_i_red, done);
+	signal state: statetype;
+
+	signal RN			: unsigned (2*n-1 downto 0);
+	Signal v				: unsigned (2*n-1 downto 0);
+	signal z				: unsigned (2*n-1 downto 0);
+	signal v_1			: unsigned (2*n-1 downto 0);
+	signal z_1			: unsigned (2*n-1 downto 0); 
+	signal i				: integer range 0 to n-1;
+	signal i_unsigned	: unsigned (2*n-1 downto 0);
+
+----- Initial signal for the register --------	
+	signal initial		: std_logic;
+
+
+----- Adder & Subtractor selector signal -----	
+	signal selA			: std_logic_vector(1 downto 0);
+	signal selB			: std_logic_vector(1 downto 0);
+
+----- Z register selector signal --------------
+	signal selZ			: std_logic;
+
+----- Sign selection signal for adder subtractor --	
+	signal a_s			: std_logic;
+
+----- ld_signal signal -----------------------------	
+	signal ldX			: std_logic;
+	signal ldV			: std_logic;
+	signal ldZ			: std_logic;
+	signal ldi			: std_logic;
+	
+	signal A				: unsigned (2*n-1 downto 0);
+	signal B				: unsigned (2*n-1 downto 0);
+	signal S				: signed (2*n downto 0);
+
+------ Register Component Declaration -----------------
+-------------------------------------------------------	
+	component reg is 
+	generic (n 			: integer := 32);
+	port (
+	input_register		: in unsigned(2*n-1 downto 0);
+	output_register	: out unsigned (2*n-1 downto 0);
+	init					: in std_logic;
+	init_value			: in unsigned(2*n-1 downto 0);
+	ld_signal			: in std_logic;
+	clk					: in std_logic);
+	
+	end component;
+	
+------ Multiplexer Component Declaration --------------
+-------------------------------------------------------		
+	component multiplexers is 
+	generic (n 			: integer := 32);
+	port (
+	In_1					: in unsigned(2*n-1 downto 0);
+	In_2 					: in unsigned(2*n-1 downto 0);
+	In_3 					: in unsigned(2*n-1 downto 0);
+	mux_select 			: in std_logic_vector(1 downto 0);
+	S_mux 				: out unsigned (2*n-1 downto 0));
+	
+	end component;
+
+	
+
+
+------ Adder & Subtractor Component Declaration ------
+-------------------------------------------------------	
+	component add_sub is 
+	generic (n 			: integer := 32);
+	port (
+	A						: in unsigned(2*n-1 downto 0);
+	B 						: in unsigned(2*n-1 downto 0);
+	add_sub_select 	: in std_logic;
+	S 						: out signed (2*n downto 0));
+	
+	end component;
+
+-------------Control unit (Finite State Machine) -------------	
+	
+begin
+
+	process(clk, reset, start)
+		begin
+		if reset 	= '0' then --reset is pressed 
+			state 	<= idle;
+		else 
+			if rising_edge(clk)  then 
+			case state is
+				when idle =>
+				
+					if start = '1' then
+						state <= init;
+					else 
+						state <= idle;
+					end if;
+			
+				when init =>
+				
+					state <= Z_plus_V;
+	
+				when Z_plus_V =>
+				
+					state <= N_comp_Z;
+				
+				when N_comp_Z =>
+				
+					if S(2*n) = '0' then 	-- When N is bigger than Z
+						state <= N_minus_Z;
+						
+					elsif S(2*n) = '1' then --When N is smaller than Z
+						state <= Z_minus_V;
+					end if;
+					
+				when N_minus_Z =>
+				
+					state <= Z_plus_V2;
+
+				when Z_plus_V2 =>
+				
+					state <= ZV_div_i_red;
+				
+				when Z_minus_V => 
+				
+					state <= ZV_div_i_red;
+				
+				when ZV_div_i_red => 
+				
+					if i = 0 then
+						state <= done;
+					elsif i /= 0 then
+						state <= Z_plus_V;
+					end if;
+				
+				when done =>
+					
+					results <= z(n-1 downto 0);
+					if start = '1' then
+						state <= done;
+						finished <= '1';
+					else
+						state <= idle;
+						finished <= '0';
+					end if;
+			
+			end case;
+			end if;
+		end if;
+	end process;			
+
+---------------------------------------------	
+------------- Datapath ----------------------
+---------------------------------------------
+
+------- Register N --------------
+	reg_N:  reg
+	generic map (n => n)
+	port map (input_register => unsigned(S(2*n-1 downto 0)), 
+				init_value		 => X, 
+				ld_signal 		 => ldX, 
+				init 				 => initial, 
+				clk 				 => clk, 
+				output_register => RN);
+
+------- Register Z --------------	
+	reg_Z:  reg
+	generic map (n => n)
+	port map (input_register  => z_1, 
+				 init_value      => (others => '0'), 
+				 ld_signal 		  =>  ldZ, 
+				 init            => initial, 
+				 clk 				  => clk, 
+				 output_register => z);
+	
+------- Register V --------------	
+	reg_V:  reg
+	generic map (n => n)
+	port map (input_register => v_1, 
+				init_value 		 => (2*n-2 => '1',others => '0'), 
+				ld_signal 		 =>  ldV, 
+				init 				 => initial, 
+				clk 				 => clk, 
+				output_register => v);
+	
+
+------- Multiplexer for Z --------------	
+	z_1 <=  unsigned(S(2*n-1 downto 0)) when selZ = '0' else '0' & z(2*n-1 downto 1);
+	
+------- 2 bit right shifted V through concatanation method ----------
+	v_1 <= "00" & v(2*n-1 downto 2);
+	
+
+	process(clk)
+	
+	begin
+	
+		if rising_edge(clk) then
+			if initial = '1' then
+				i <= n-1;
+			elsif  ldi = '1' then
+				i <= to_integer(S);
+		
+			end if;
+		end if;
+	end process;
+	
+	
+------ Adder and Subtractor --------------------------------------------	
+	Adder_subtractor: add_sub
+	generic map (n => n)
+	port map(A 					=> A, 
+				B 					=> B, 
+				add_sub_select => a_s, 
+				S 					=> S);
+	
+	i_unsigned <= to_unsigned(i, i_unsigned'length);
+
+------ Multiplexers --------------------------------------------		
+	Mltiplexer_A: multiplexers
+	generic map (n => n)
+	port map(In_1 			=> RN, 
+				In_2 			=> z, 
+				In_3 			=> i_unsigned, 
+				mux_select 	=> selA, 
+				S_mux 		=> A);
+
+	Mltiplexer_B: multiplexers
+	generic map (n => n)
+	port map(In_1 			=> z, 
+				In_2 			=> v, 
+				In_3 			=> (0 => '1', others => '0'), 
+				mux_select 	=> selB, 
+				S_mux 		=> B);
+
+------- All the load signals (control signals) --------------------
+	initial <= '1' when state = init else '0';
+
+	ldZ <= '1' when (state = Z_plus_V or state = Z_plus_V2 or state = Z_minus_V or state = ZV_div_i_red) else '0';
+	ldX <= '1' when state = N_minus_Z else '0';
+	ldi <= '1' when (state = ZV_div_i_red and i /= 0) else '0';
+	ldV <= '1' when state = ZV_div_i_red else '0';
+
+	selA	<= "00" when (state = N_comp_Z or state = N_minus_Z) else "01" when (state = Z_plus_V or state = Z_plus_V2 or state = Z_minus_V) else "10" when state = ZV_div_i_red else "11";
+	selB	<= "00" when (state = N_comp_Z or state = N_minus_Z) else "01" when (state = Z_plus_V or state = Z_plus_V2 or state = Z_minus_V) else "10" when state = ZV_div_i_red else "11";
+	selZ	<= '0'  when (state = Z_plus_V or state = Z_plus_V2 or state = Z_minus_V) else '1'; -- When Z is the primary operand, selZ = 0 is selected. As a result, the latest Z will be chosen from the adder-subtractor. 																															--Otherwise selZ = 1 will be selected and Z will be shifted 1 bit right through concatenation.
+
+	a_s<= '1' when (state = Z_plus_V or state = Z_plus_V2) else '0'; -- Here, a_s 1 means it is an addition and 0 means it is subtraction.
+
+	
+	
+end architecture a5;

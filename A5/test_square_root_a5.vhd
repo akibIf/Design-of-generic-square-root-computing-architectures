@@ -1,0 +1,59 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity test_square_root is
+	generic (
+		n	: integer := 32
+		);
+end entity test_square_root;
+
+architecture a1 of test_square_root is
+		signal	clk		:	std_logic := '0';
+		signal	reset		:	std_logic := '0';
+		signal	start		:	std_logic := '0';
+		signal	X			:	unsigned (2*n-1 downto 0) :=	to_unsigned(4, 2*n);
+		signal	results	:	unsigned (n-1 downto 0);
+		signal	finished	:	std_logic;
+		type	input_type	is array (0 to 4) of unsigned (2*n-1 downto 0);
+		signal	Inp		:	input_type;
+		signal	count		:	integer range 0 to 4 := 0;
+begin
+		UUT: entity work.square_root(a5)
+		port map	(	clk		=> clk,
+						reset		=> reset,
+						start		=> start,
+						X			=> X,
+						results	=> results,
+						finished	=> finished
+		);
+		
+		Inp(0)	<=	(16 => '1', others => '0');
+		Inp(1)	<=	(18 => '1', others => '0');
+		Inp(2)	<=	(32 => '1', others => '0');
+		Inp(3)	<=	(48 => '1', 36=> '1', others => '0');
+		Inp(4)	<=	(63 => '1', 54 => '1', others => '0');
+		
+		clk 	<= not clk after 10 ns;
+		reset 	<= '0', '1' after 20 ns;
+		
+		process (clk)
+		begin
+			if (rising_edge(clk)) then
+				
+				if (reset = '1') then
+					start	<= '1';
+				end if;
+				
+				if (finished = '1' and start = '1') then
+				
+					start <= '0';
+					X <= Inp(count);
+					
+					if (count < 3) then count <= count+1; end if;
+				
+				end if;
+			end if;
+		end process;
+		
+end architecture a1;

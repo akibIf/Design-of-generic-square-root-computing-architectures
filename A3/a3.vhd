@@ -1,0 +1,44 @@
+--------------------------------------------------------
+--------------------------------------------------------
+--- A combinatorial architecture for sqrt --------------
+------------ Architecture 3 ----------------------------
+--------------------------------------------------------
+--------------------------------------------------------
+
+
+architecture a3 of square_root is
+	type registerType  is array (0 to n) of unsigned (2*n-1 downto 0);
+	type registerType1 is array (0 to n-1) of unsigned (2*n-1 downto 0);
+
+	signal X 				:	registerType  ;  -- A signal which is being used to receieve the input signal 
+	signal V 				:	registerType  ;  -- An useful signal for the purpose of the computation
+	signal Z 				:	registerType  ;  -- An useful signal for final results
+	signal Z_temp 			:	registerType1 ;  -- A signal to store the computation values
+	signal Z_div_2 		:	registerType1 ;  -- A signal to store the 1 bit shifted values
+	signal compare 		:	unsigned(n-1 downto 0) ; -- A signal to compare two different operand
+	
+begin 
+
+	X(n) 		<= N_in;						 	  	  -- Receiving the input values from testbench
+	Z(n) 		<= (others => '0');             -- initializing the Most significant Z register
+	
+	loop1: for j in n downto 1 generate      -- An iteration process to initialize the V register
+	
+            V(j) <= (2*j-2 => '1', others =>'0');  
+   
+			end generate loop1;
+			 
+   V(0) <= (others =>'0');  						-- Lease significant V register is being initialized to 0
+	  
+   loop2: for i in n-1 downto 0 generate     -- An iteration process for the computation of the combinational process
+		Z_temp(i) <= Z(i+1) + V(i+1); 			-- This part signifies the primary intialization of the given algorithms, Z = Z+V
+		Z_div_2(i) <= Z(i+1) / 2; 					-- Here, Z has been divided by 2 (Z = Z/2) which later initialized to current register Z,
+		compare(i) <= '1'when X(i+1) >= Z_temp(i) else '0'; 						-- This line represents the condition statement N >= Z
+		X(i) <= X(i+1) - Z_temp(i) when compare(i) = '1' else X(i+1);			-- A conditional relation to assign  the X register.
+		Z(i) <= Z_div_2(i) + V(i+1) when compare(i) = '1' else Z_div_2(i);	-- Another conditional relation to assign the Z register.
+
+   end generate loop2;
+  
+   results <= Z(0)(n-1 downto 0);				-- Final results is being sent to the testbench.
+	  
+end a3;

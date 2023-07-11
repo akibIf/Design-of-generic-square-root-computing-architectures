@@ -1,0 +1,64 @@
+-------------------------------------------------------------------------------------
+-- Project: Design of generic square root computing architectures on FPGA using VHDL
+--===================================================================================
+-- square root's entity
+------------------------------------------------------------------------------------
+ 
+ 
+ library IEEE;
+ use IEEE.STD_LOGIC_1164.ALL;
+ use IEEE.numeric_std.ALL;
+
+ entity square_root is
+
+ generic (n : integer := 32) ;
+
+ port ( 
+-- 	  clk			: in std_logic;						-- clock signal
+--	  reset		: in std_logic;						-- reset signal
+--     start  	: in std_logic;						-- Start signal to start the operation
+     N_in    	: in unsigned(2*n-1 downto 0);	-- input X
+     results 	: out unsigned(n-1 downto 0)		-- Final result
+--     finished 	: out std_logic						-- Finished signal
+ );
+ end square_root;
+ 
+ 
+ 
+--
+--library IEEE;
+--use IEEE.STD_LOGIC_1164.ALL;
+--use IEEE.numeric_std.ALL;
+--
+--entity square_root is
+--
+--generic (n : integer := 32) ;
+--
+--port ( 
+--	clk,reset: in std_logic;		-- horloge d'entre, reset et horloge d'échantillonnage
+--    start     : in std_logic;			-- autorisation de fonctionnement
+--    N_in    : in unsigned(2*n-1 downto 0);	-- facteur de division
+--    results : out unsigned(n-1 downto 0);	-- compteur de division
+--    finished : out std_logic			-- horloge divisee generee\
+--	 -- i_eq_0 :	in std_logic;
+--	 -- c_out :	in std_logic
+--	 );
+--end square_root ;
+
+--library ieee;
+--use ieee.std_logic_1164.all;
+--use ieee.numeric_std.all;
+--
+--entity square_root is
+--generic (
+--		n	: integer := 32
+--		);
+--	port (
+--		clk			:	in 	std_logic;
+--		rst			:	in		std_logic;
+--		start		:	in		std_logic;
+--		X			:	in 	unsigned (2*n-1 downto 0);
+--		Result		:	out	unsigned (n-1 downto 0);
+--		finished	:	out	std_logic
+--		);
+--end entity square_root;
